@@ -1,0 +1,3 @@
+import { LegalPage } from '@/components/legal-page';
+export const metadata = { title: 'Chính sách hoàn tiền' };
+export default function Page() { return <LegalPage title="Chính sách hoàn tiền" updated="08/09/2026"><section><h2>Sản phẩm kỹ thuật số</h2><p>Do file được giao ngay sau thanh toán, yêu cầu hoàn tiền sẽ được xem xét khi file lỗi, không đúng mô tả hoặc khách không thể tải do lỗi hệ thống.</p></section><section><h2>Cách gửi yêu cầu</h2><p>Khách hàng cần cung cấp email mua hàng, mã đơn và mô tả vấn đề trong thời hạn được chủ website công bố trước khi mở bán.</p></section><section><h2>Xử lý</h2><p>Hoàn tiền chưa tự động trong MVP. Admin xác minh và thực hiện thủ công qua kênh thanh toán phù hợp.</p></section></LegalPage>; }

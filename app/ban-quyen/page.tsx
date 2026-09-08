@@ -1,0 +1,3 @@
+import { LegalPage } from '@/components/legal-page';
+export const metadata = { title: 'Chính sách bản quyền' };
+export default function Page() { return <LegalPage title="Chính sách bản quyền" updated="08/09/2026"><section><h2>Giấy phép tiêu chuẩn</h2><p>Mỗi đơn hàng cấp quyền sử dụng cho người mua theo nội dung ghi trên trang sản phẩm. Quyền sở hữu trí tuệ vẫn thuộc tác giả hoặc đơn vị phát hành.</p></section><section><h2>Không được phép</h2><p>Không bán lại file, chia sẻ link tải, đưa file lên kho công khai hoặc phân phối nguyên trạng cho bên thứ ba.</p></section><section><h2>Phiên bản sản phẩm</h2><p>Đơn hàng được gắn với phiên bản đã mua. Việc cung cấp phiên bản mới miễn phí do chính sách của từng sản phẩm quyết định.</p></section></LegalPage>; }
