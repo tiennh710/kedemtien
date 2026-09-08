@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { CheckCircle2, Clock3, Loader2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { readJson } from '@/lib/client/api';
+
 type Order = { status: string; delivery_status: string; amount_total: number };
 
 export function PaymentStatus({ orderCode, cancelled = false }: { orderCode?: string; cancelled?: boolean }) {
@@ -12,7 +14,7 @@ export function PaymentStatus({ orderCode, cancelled = false }: { orderCode?: st
   useEffect(() => {
     if (!orderCode || cancelled) return;
     let attempts = 0;
-    const check = async () => { const response = await fetch(`/api/orders/status?orderCode=${encodeURIComponent(orderCode)}`); if (response.ok) { const data = await response.json(); setOrder(data.order); if (data.order.status === 'paid') { setLoading(false); return; } } attempts += 1; if (attempts < 12) setTimeout(check, 2500); else setLoading(false); };
+    const check = async () => { const response = await fetch(`/api/orders/status?orderCode=${encodeURIComponent(orderCode)}`); if (response.ok) { const data = await readJson<{ order: Order }>(response); setOrder(data.order); if (data.order.status === 'paid') { setLoading(false); return; } } attempts += 1; if (attempts < 12) setTimeout(check, 2500); else setLoading(false); };
     void check();
   }, [orderCode, cancelled]);
   const success = order?.status === 'paid';

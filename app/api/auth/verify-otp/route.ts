@@ -5,7 +5,7 @@ import { ensureDatabase, getD1 } from '@/lib/server/database';
 import { hmac, normalizeEmail, randomToken, safeReturnTo, sessionCookie } from '@/lib/server/security';
 
 const inputSchema = z.object({
-  email: z.string().email().max(254),
+  email: z.email().max(254),
   code: z.string().regex(/^\d{6}$/),
   returnTo: z.string().optional(),
 });

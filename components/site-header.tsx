@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 
 import { useCart } from '@/components/cart-provider';
 import { Button } from '@/components/ui/button';
+import { readJson } from '@/lib/client/api';
 
 type User = { email: string; isAdmin: boolean } | null;
 
@@ -13,7 +14,7 @@ export function SiteHeader({ compact = false }: { compact?: boolean }) {
   const { items } = useCart();
   const [user, setUser] = useState<User>(null);
   useEffect(() => {
-    fetch('/api/auth/session').then((response) => response.json()).then((data) => setUser(data.user ?? null)).catch(() => undefined);
+    fetch('/api/auth/session').then((response) => readJson<{ user?: User }>(response)).then((data) => setUser(data.user ?? null)).catch(() => undefined);
   }, []);
   return (
     <header className="sticky top-0 z-40 border-b border-[#e7e8f1] bg-white/92 backdrop-blur-xl">

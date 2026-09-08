@@ -2,30 +2,31 @@
 
 import Link from 'next/link';
 import { ArrowLeft, Loader2, ShoppingBag, Trash2 } from 'lucide-react';
-import { FormEvent, useEffect, useState } from 'react';
+import { SubmitEvent, useEffect, useState } from 'react';
 
 import { useCart } from '@/components/cart-provider';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatVnd } from '@/lib/catalog';
+import { apiError, readJson } from '@/lib/client/api';
 
 export function CartPage() {
   const { items, remove, clear } = useCart();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  useEffect(() => { fetch('/api/auth/session').then((r) => r.json()).then((d) => d.user?.email && setEmail(d.user.email)).catch(() => undefined); }, []);
+  useEffect(() => { fetch('/api/auth/session').then((response) => readJson<{ user?: { email?: string } }>(response)).then((data) => data.user?.email && setEmail(data.user.email)).catch(() => undefined); }, []);
   const total = items.reduce((sum, item) => sum + item.priceVnd, 0);
 
-  async function checkout(event: FormEvent) {
+  async function checkout(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true); setMessage('');
     try {
       const response = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, productIds: items.map((item) => item.id) }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Không thể tạo đơn hàng.');
-      if (data.kind === 'payos') { window.location.href = data.checkoutUrl; return; }
+      const data = await readJson<{ kind?: 'free' | 'payos'; checkoutUrl?: string; delivery?: string; error?: string }>(response);
+      if (!response.ok) throw new Error(apiError(data, 'Không thể tạo đơn hàng.'));
+      if (data.kind === 'payos' && data.checkoutUrl) { window.location.assign(data.checkoutUrl); return; }
       clear();
       setMessage(data.delivery === 'sent' ? `Đã gửi link tải cho ${email}.` : 'Đơn miễn phí đã tạo. Email chưa gửi được; hãy đăng nhập để tải trong thư viện.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Có lỗi xảy ra.'); }

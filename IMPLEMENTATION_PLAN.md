@@ -43,6 +43,7 @@ Sao chép `.env.example` thành `.env` cho local hoặc khai báo secrets trên 
 - Các trang marketplace, chi tiết, giỏ hàng, đăng nhập, tài khoản, admin, pháp lý và trạng thái thanh toán đều trả về đúng.
 - Trang không tồn tại và token tải sai trả về `404`.
 - OTP local, session cookie, phân quyền admin và các trường hợp input không hợp lệ đã được kiểm thử.
+- `oxlint` và TypeScript `tsc --noEmit` đã chạy sạch; React/RSC đã được cập nhật lên bản vá `19.2.8`.
 
 ## Chạy local
 
@@ -60,6 +61,10 @@ Mở `http://localhost:3000`. Với cấu hình local hiện tại, admin dùng 
 3. Xác minh tên miền gửi trên Resend rồi đặt `EMAIL_FROM` bằng địa chỉ thuộc tên miền đó.
 4. Thay `SESSION_SECRET` và `OTP_HMAC_SECRET` bằng chuỗi ngẫu nhiên dài tối thiểu 32 ký tự.
 5. Đổi `ADMIN_EMAILS` sang email admin thật, upload ít nhất một file `.xlsx` kèm ảnh preview và chạy lại checklist bên trên.
+
+## Lưu ý phụ thuộc
+
+`npm audit` vẫn báo advisory ở `vinext`, `vite`, `image-size` và một số công cụ Cloudflare dùng trong quá trình build/local. Bản sửa tự động hiện yêu cầu nâng ra ngoài dải phiên bản do bộ Sites sinh ra, nên không dùng `--force`. Không mở dev server ra Internet; trước production nên nâng toolchain Sites/Vinext khi bản tương thích chính thức có sẵn, rồi chạy lại build, lint và UAT.
 
 ## Giới hạn MVP
 

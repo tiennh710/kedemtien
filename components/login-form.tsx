@@ -2,10 +2,11 @@
 
 import { ArrowLeft, KeyRound, Loader2, Mail } from 'lucide-react';
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
+import { SubmitEvent, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { apiError, readJson } from '@/lib/client/api';
 
 export function LoginForm({ returnTo = '/tai-khoan' }: { returnTo?: string }) {
   const [email, setEmail] = useState('');
@@ -14,24 +15,24 @@ export function LoginForm({ returnTo = '/tai-khoan' }: { returnTo?: string }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  async function requestCode(event: FormEvent) {
+  async function requestCode(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault(); setLoading(true); setMessage('');
     try {
       const response = await fetch('/api/auth/request-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      const data = await readJson<{ debugCode?: string; error?: string }>(response);
+      if (!response.ok) throw new Error(apiError(data, 'Không thể gửi mã.'));
       setSent(true); if (data.debugCode) { setCode(data.debugCode); setMessage(`Chế độ local: mã ${data.debugCode} đã được điền sẵn.`); } else setMessage('Mã đăng nhập đã được gửi tới email của bạn.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Không thể gửi mã.'); }
     finally { setLoading(false); }
   }
 
-  async function verify(event: FormEvent) {
+  async function verify(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault(); setLoading(true); setMessage('');
     try {
       const response = await fetch('/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, code, returnTo }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-      window.location.href = data.returnTo;
+      const data = await readJson<{ returnTo?: string; error?: string }>(response);
+      if (!response.ok || !data.returnTo) throw new Error(apiError(data, 'Không thể đăng nhập.'));
+      window.location.assign(data.returnTo);
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Không thể đăng nhập.'); }
     finally { setLoading(false); }
   }

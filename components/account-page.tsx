@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { formatVnd } from '@/lib/catalog';
+import { apiError, readJson } from '@/lib/client/api';
 
 type Item = { order_item_id: number; title_snapshot: string; price_snapshot: number; order_code: number; paid_at: number; original_filename: string; size_bytes: number; version: number };
 type AccountData = { user: { email: string; isAdmin: boolean }; items: Item[] };
@@ -15,16 +16,16 @@ export function AccountPage() {
   const [data, setData] = useState<AccountData | null>(null);
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState<number | null>(null);
-  useEffect(() => { fetch('/api/account').then(async (r) => { const body = await r.json(); if (r.status === 401) { window.location.href = '/dang-nhap?returnTo=/tai-khoan'; return; } if (!r.ok) throw new Error(body.error); setData(body); }).catch((e) => setError(e.message)); }, []);
+  useEffect(() => { fetch('/api/account').then(async (response) => { const body = await readJson<AccountData | { error?: string }>(response); if (response.status === 401) { window.location.assign('/dang-nhap?returnTo=/tai-khoan'); return; } if (!response.ok || !('user' in body)) throw new Error(apiError(body, 'Không thể tải thư viện.')); setData(body); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Không thể tải thư viện.')); }, []);
 
   async function download(orderItemId: number) {
     setDownloading(orderItemId); setError('');
-    try { const response = await fetch('/api/account/download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderItemId }) }); const body = await response.json(); if (!response.ok) throw new Error(body.error); window.location.href = body.url; }
+    try { const response = await fetch('/api/account/download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderItemId }) }); const body = await readJson<{ url?: string; error?: string }>(response); if (!response.ok || !body.url) throw new Error(apiError(body, 'Không thể tạo link tải.')); window.location.assign(body.url); }
     catch (e) { setError(e instanceof Error ? e.message : 'Không thể tải file.'); }
     finally { setDownloading(null); }
   }
 
-  async function logout() { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/'; }
+  async function logout() { await fetch('/api/auth/logout', { method: 'POST' }); window.location.assign('/'); }
 
   return <div className="min-h-screen bg-[#f7f8fc]"><SiteHeader compact /><main className="mx-auto max-w-5xl px-4 py-8 sm:px-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-[#4635f3]">THƯ VIỆN CỦA TÔI</p><h1 className="mt-1 text-3xl font-extrabold tracking-tight">File Excel đã sở hữu</h1><p className="mt-2 text-sm text-[#717284]">{data?.user.email}</p></div><div className="flex gap-2">{data?.user.isAdmin && <Link href="/admin" className="rounded-xl bg-[#ece9ff] px-4 py-2.5 text-sm font-semibold text-[#4635f3]">Trang quản trị</Link>}<Button onClick={logout} variant="outline" className="h-10 bg-white"><LogOut />Đăng xuất</Button></div></div>
     {!data && !error && <div className="mt-12 flex items-center justify-center text-sm text-[#737487]"><Loader2 className="mr-2 animate-spin" />Đang tải thư viện...</div>}{error && <p className="mt-8 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}{data && !data.items.length && <div className="mt-8 rounded-3xl border border-dashed border-[#d7d8e3] bg-white p-12 text-center"><FileSpreadsheet className="mx-auto size-9 text-[#9293a4]" /><p className="mt-4 font-semibold">Bạn chưa có file nào</p><Link href="/" className="mt-4 inline-flex rounded-xl bg-[#4635f3] px-4 py-2.5 text-sm font-semibold text-white">Khám phá thư viện</Link></div>}

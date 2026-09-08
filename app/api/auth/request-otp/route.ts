@@ -6,7 +6,7 @@ import { ensureDatabase, getD1 } from '@/lib/server/database';
 import { sendOtpEmail } from '@/lib/server/email';
 import { hmac, normalizeEmail, requestFingerprint } from '@/lib/server/security';
 
-const inputSchema = z.object({ email: z.string().email().max(254) });
+const inputSchema = z.object({ email: z.email().max(254) });
 
 export async function POST(request: Request) {
   try {

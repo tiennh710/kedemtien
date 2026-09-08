@@ -19,13 +19,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let restored: CartItem[] = [];
     try {
-      const saved = JSON.parse(localStorage.getItem('kdt_cart') ?? '[]');
-      if (Array.isArray(saved)) setItems(saved.filter((item) => Number.isInteger(item?.id) && item.id > 0));
+      const saved: unknown = JSON.parse(localStorage.getItem('kdt_cart') ?? '[]');
+      if (Array.isArray(saved)) restored = saved.filter((item): item is CartItem => Boolean(item && typeof item === 'object' && 'id' in item && Number.isInteger(item.id) && Number(item.id) > 0));
     } catch {
       localStorage.removeItem('kdt_cart');
     }
-    setReady(true);
+    queueMicrotask(() => { setItems(restored); setReady(true); });
   }, []);
 
   useEffect(() => {

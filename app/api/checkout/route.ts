@@ -7,7 +7,7 @@ import { fulfillOrder } from '@/lib/server/orders';
 import { createPayOsLink } from '@/lib/server/payos';
 import { getSessionUser, normalizeEmail } from '@/lib/server/security';
 
-const inputSchema = z.object({ email: z.string().email().max(254), productIds: z.array(z.number().int().positive()).min(1).max(20) });
+const inputSchema = z.object({ email: z.email().max(254), productIds: z.array(z.number().int().positive()).min(1).max(20) });
 
 type CheckoutProduct = { id: number; title: string; price_vnd: number; asset_id: number | null };
 

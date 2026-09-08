@@ -42,7 +42,8 @@ export async function POST(request: Request) {
     await db.prepare('INSERT OR IGNORE INTO categories (name, slug, sort_order) VALUES (?, ?, 0)').bind(category, categorySlug).run();
     const categoryRow = await db.prepare('SELECT id FROM categories WHERE slug = ?').bind(categorySlug).first<{ id: number }>();
     if (!categoryRow) throw new Error('Không thể tạo danh mục.');
-    const baseSlug = slugify(String(form.get('slug') || title));
+    const slugValue = form.get('slug');
+    const baseSlug = slugify(typeof slugValue === 'string' && slugValue ? slugValue : title);
     if (!baseSlug) throw new Error('Đường dẫn sản phẩm không hợp lệ.');
     const duplicate = await db.prepare('SELECT id FROM products WHERE slug = ?').bind(baseSlug).first();
     if (duplicate) return NextResponse.json({ error: 'Đường dẫn sản phẩm đã tồn tại.' }, { status: 409 });
@@ -71,7 +72,8 @@ export async function POST(request: Request) {
 }
 
 function textField(form: FormData, key: string, min: number, max: number) {
-  const value = String(form.get(key) ?? '').trim();
+  const field = form.get(key);
+  const value = typeof field === 'string' ? field.trim() : '';
   if (value.length < min || value.length > max) throw new Error(`${key} chưa hợp lệ.`);
   return value;
 }

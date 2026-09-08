@@ -11,8 +11,10 @@ async function signData(data: Record<string, unknown>, secret: string) {
 
 function serializeValue(value: unknown): string {
   if (value === null || value === undefined) return '';
-  if (Array.isArray(value) || typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+  if (Array.isArray(value) || typeof value === 'object') return JSON.stringify(value) ?? '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return `${value}`;
+  return '';
 }
 
 function requirePayOs() {
@@ -42,7 +44,9 @@ export async function verifyPayOsWebhook(payload: unknown) {
   if (!input.data || !input.signature) return null;
   const expected = await signData(input.data, config.checksumKey);
   if (!timingSafeEqual(expected, input.signature.toLowerCase())) return null;
-  return { ...input.data, success: input.success };
+  const { orderCode, amount, code } = input.data;
+  if ((typeof orderCode !== 'number' && typeof orderCode !== 'string') || (typeof amount !== 'number' && typeof amount !== 'string')) return null;
+  return { orderCode, amount, code: typeof code === 'string' ? code : '', success: input.success };
 }
 
 function timingSafeEqual(left: string, right: string) {
