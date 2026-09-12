@@ -1,5 +1,6 @@
 'use client';
 
+import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { FileSpreadsheet, Loader2, LogOut, PackagePlus, RefreshCcw, Send, ShoppingBag } from 'lucide-react';
 import { SubmitEvent, useCallback, useEffect, useState } from 'react';
@@ -11,6 +12,37 @@ import { formatVnd, type CatalogProduct, type ProductStatus } from '@/lib/catalo
 import { apiError, readJson } from '@/lib/client/api';
 
 type Order = { id: number; order_code: number; email: string; status: string; amount_total: number; delivery_status: string; delivery_error?: string; created_at: number; items: string };
+type UploadTicket = { bucket: string; path: string; token: string; version?: number; contentType: string };
+
+const excelType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+let storageClient: ReturnType<typeof createClient> | undefined;
+
+function getStorageClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) throw new Error('Supabase chưa được cấu hình cho trình duyệt.');
+  storageClient ??= createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return storageClient;
+}
+
+async function uploadDirect(productId: number, kind: 'asset' | 'image', file: File) {
+  const response = await fetch('/api/admin/uploads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId, kind, filename: file.name, contentType: file.type || (kind === 'asset' ? excelType : ''), size: file.size }) });
+  const ticket = await readJson<UploadTicket & { error?: string }>(response);
+  if (!response.ok || !ticket.token) throw new Error(apiError(ticket, 'Không thể cấp quyền upload.'));
+  const { error } = await getStorageClient().storage.from(ticket.bucket).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: ticket.contentType });
+  if (error) throw error;
+  return ticket;
+}
+
+async function sha256File(file: File) {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function formText(form: FormData, name: string) {
+  const value = form.get(name);
+  return typeof value === 'string' ? value : '';
+}
 
 export function AdminPage() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
@@ -38,8 +70,16 @@ export function AdminPage() {
     try {
       const formElement = event.currentTarget;
       const form = new FormData(formElement);
-      const response = await fetch('/api/admin/products', { method: 'POST', body: form });
-      const data = await readJson<{ error?: string }>(response); if (!response.ok) throw new Error(apiError(data, 'Không thể tạo sản phẩm.'));
+      const file = form.get('file');
+      const images = form.getAll('images').filter((item): item is File => item instanceof File && item.size > 0);
+      if (!(file instanceof File) || !images.length) throw new Error('Vui lòng chọn file XLSX và ít nhất một ảnh.');
+      const payload = { title: formText(form, 'title'), category: formText(form, 'category'), priceVnd: Number(form.get('priceVnd')), shortDescription: formText(form, 'shortDescription'), description: formText(form, 'description'), licenseNote: formText(form, 'licenseNote'), status: form.get('status') === 'published' ? 'published' : 'draft' };
+      const response = await fetch('/api/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await readJson<{ productId?: number; error?: string }>(response); if (!response.ok || !data.productId) throw new Error(apiError(data, 'Không thể tạo sản phẩm.'));
+      const assetTicket = await uploadDirect(data.productId, 'asset', file);
+      const imageTickets = await Promise.all(images.map((image) => uploadDirect(data.productId!, 'image', image)));
+      const finalizeResponse = await fetch(`/api/admin/products/${data.productId}/uploads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asset: { path: assetTicket.path, filename: file.name, contentType: excelType, size: file.size, sha256: await sha256File(file), version: assetTicket.version }, images: imageTickets.map((ticket, index) => ({ path: ticket.path, contentType: images[index].type, size: images[index].size, altText: `${payload.title} — ảnh ${index + 1}`, sortOrder: index })) }) });
+      const finalized = await readJson<{ error?: string }>(finalizeResponse); if (!finalizeResponse.ok) throw new Error(apiError(finalized, 'Không thể hoàn tất sản phẩm.'));
       formElement.reset(); setMessage('Đã tạo sản phẩm và lưu file an toàn.'); await load();
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Không thể tạo sản phẩm.'); }
     finally { setSaving(false); }
@@ -54,7 +94,7 @@ export function AdminPage() {
 
   async function replaceAsset(productId: number, file: File | null) {
     if (!file) return; setSaving(true); setMessage('');
-    try { const form = new FormData(); form.set('file', file); const response = await fetch(`/api/admin/products/${productId}/asset`, { method: 'POST', body: form }); const data = await readJson<{ version?: number; error?: string }>(response); if (!response.ok || !data.version) throw new Error(apiError(data, 'Không thể thay file.')); setMessage(`Đã thêm phiên bản ${data.version}. Đơn cũ vẫn giữ file đã mua.`); await load(); }
+    try { const ticket = await uploadDirect(productId, 'asset', file); const response = await fetch(`/api/admin/products/${productId}/asset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: ticket.path, filename: file.name, contentType: excelType, size: file.size, sha256: await sha256File(file), version: ticket.version }) }); const data = await readJson<{ version?: number; error?: string }>(response); if (!response.ok || !data.version) throw new Error(apiError(data, 'Không thể thay file.')); setMessage(`Đã thêm phiên bản ${data.version}. Đơn cũ vẫn giữ file đã mua.`); await load(); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Không thể thay file.'); }
     finally { setSaving(false); }
   }

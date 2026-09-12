@@ -1,7 +1,6 @@
-import { env } from 'cloudflare:workers';
-
 import { ensureDatabase, getD1 } from '@/lib/server/database';
 import { sendDownloadEmail } from '@/lib/server/email';
+import { env } from '@/lib/server/env';
 import { hmac, randomToken } from '@/lib/server/security';
 
 type DeliveryItem = { id: number; title_snapshot: string };

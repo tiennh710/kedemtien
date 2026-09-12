@@ -7,13 +7,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   await ensureDatabase();
   const row = await getD1().prepare('SELECT r2_key, content_type FROM product_images WHERE id = ?').bind(imageId).first<{ r2_key: string; content_type: string }>();
   if (!row) return new Response('Không tìm thấy ảnh.', { status: 404 });
-  const object = await getFilesBucket().get(row.r2_key);
-  if (!object) return new Response('Không tìm thấy ảnh.', { status: 404 });
-  return new Response(object.body, {
-    headers: {
-      'Content-Type': row.content_type,
-      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
-      ETag: object.httpEtag,
-    },
-  });
+  try {
+    return Response.redirect(await getFilesBucket().createSignedUrl(row.r2_key, 60 * 60), 302);
+  } catch {
+    return new Response('Không tìm thấy ảnh.', { status: 404 });
+  }
 }

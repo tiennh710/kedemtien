@@ -1,8 +1,8 @@
-import { env } from 'cloudflare:workers';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { ensureDatabase, getD1 } from '@/lib/server/database';
+import { env } from '@/lib/server/env';
 import { fulfillOrder } from '@/lib/server/orders';
 import { createPayOsLink } from '@/lib/server/payos';
 import { getSessionUser, normalizeEmail } from '@/lib/server/security';

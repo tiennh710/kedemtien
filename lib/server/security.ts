@@ -1,6 +1,5 @@
-import { env } from 'cloudflare:workers';
-
 import { ensureDatabase, getD1 } from '@/lib/server/database';
+import { env } from '@/lib/server/env';
 
 export const SESSION_COOKIE = 'kdt_session';
 

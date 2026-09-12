@@ -1,54 +1,20 @@
-import { env } from 'cloudflare:workers';
-
 import { demoProducts, type CatalogProduct, type ProductStatus } from '@/lib/catalog';
-
-const schemaStatements = [
-  `CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, slug TEXT NOT NULL UNIQUE, sort_order INTEGER NOT NULL DEFAULT 0)`,
-  `CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER REFERENCES categories(id), slug TEXT NOT NULL UNIQUE, title TEXT NOT NULL, short_description TEXT NOT NULL, description TEXT NOT NULL, price_vnd INTEGER NOT NULL DEFAULT 0, license_note TEXT NOT NULL DEFAULT 'Giấy phép sử dụng tiêu chuẩn', status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')), cover_tone TEXT NOT NULL DEFAULT 'indigo', created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, published_at INTEGER)`,
-  `CREATE TABLE IF NOT EXISTS product_assets (id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL REFERENCES products(id), version INTEGER NOT NULL, r2_key TEXT NOT NULL UNIQUE, original_filename TEXT NOT NULL, content_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, sha256 TEXT NOT NULL, created_at INTEGER NOT NULL, UNIQUE(product_id, version))`,
-  `CREATE TABLE IF NOT EXISTS product_images (id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL REFERENCES products(id), r2_key TEXT NOT NULL UNIQUE, content_type TEXT NOT NULL, alt_text TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS otp_challenges (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, code_hash TEXT NOT NULL, ip_hash TEXT NOT NULL, expires_at INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, consumed_at INTEGER, created_at INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id), token_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, created_at INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, order_code INTEGER NOT NULL UNIQUE, email TEXT NOT NULL, user_id INTEGER REFERENCES users(id), status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','paid','cancelled','expired','refunded')), amount_total INTEGER NOT NULL, payos_payment_link_id TEXT, delivery_status TEXT NOT NULL DEFAULT 'pending' CHECK(delivery_status IN ('pending','sent','failed')), delivery_error TEXT, created_at INTEGER NOT NULL, paid_at INTEGER)`,
-  `CREATE TABLE IF NOT EXISTS order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL REFERENCES orders(id), product_id INTEGER NOT NULL REFERENCES products(id), asset_id INTEGER NOT NULL REFERENCES product_assets(id), title_snapshot TEXT NOT NULL, price_snapshot INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS entitlements (id INTEGER PRIMARY KEY AUTOINCREMENT, order_item_id INTEGER NOT NULL UNIQUE REFERENCES order_items(id), user_id INTEGER REFERENCES users(id), email TEXT NOT NULL, created_at INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS download_links (id INTEGER PRIMARY KEY AUTOINCREMENT, order_item_id INTEGER NOT NULL REFERENCES order_items(id), token_hash TEXT NOT NULL UNIQUE, email TEXT NOT NULL, expires_at INTEGER NOT NULL, max_downloads INTEGER NOT NULL DEFAULT 5, download_count INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS download_events (id INTEGER PRIMARY KEY AUTOINCREMENT, link_id INTEGER NOT NULL REFERENCES download_links(id), ip_hash TEXT NOT NULL, user_agent TEXT NOT NULL, created_at INTEGER NOT NULL)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_products_slug ON products(slug)`,
-  `CREATE INDEX IF NOT EXISTS idx_products_status_category ON products(status, category_id)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_product_assets_version ON product_assets(product_id, version)`,
-  `CREATE INDEX IF NOT EXISTS idx_product_images_product_sort ON product_images(product_id, sort_order)`,
-  `CREATE INDEX IF NOT EXISTS idx_otp_email_created ON otp_challenges(email, created_at)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash)`,
-  `CREATE INDEX IF NOT EXISTS idx_orders_email_created ON orders(email, created_at)`,
-  `CREATE INDEX IF NOT EXISTS idx_orders_status_created ON orders(status, created_at)`,
-  `CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_entitlements_email ON entitlements(email)`,
-  `CREATE INDEX IF NOT EXISTS idx_entitlements_user ON entitlements(user_id)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_download_links_token ON download_links(token_hash)`,
-  `CREATE INDEX IF NOT EXISTS idx_download_events_link ON download_events(link_id)`,
-];
+import { getDatabaseCompat, schemaStatements } from '@/lib/server/postgres';
+import { getFilesBucket } from '@/lib/server/storage';
 
 let ready: Promise<void> | undefined;
 
 export function getD1() {
-  if (!env.DB) throw new Error('D1 binding DB chưa được cấu hình.');
-  return env.DB;
+  return getDatabaseCompat();
 }
 
-export function getFilesBucket() {
-  if (!env.FILES) throw new Error('R2 binding FILES chưa được cấu hình.');
-  return env.FILES;
-}
+export { getFilesBucket };
 
 export async function ensureDatabase() {
   ready ??= (async () => {
     const db = getD1();
     const statements = schemaStatements.map((sql) => db.prepare(sql));
     await db.batch(statements);
-    await db.prepare('PRAGMA optimize').run();
   })().catch((error) => {
     ready = undefined;
     throw error;

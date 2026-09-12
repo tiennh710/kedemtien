@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { env } from '@/lib/server/env';
 
 type EmailResult = { ok: true; id?: string } | { ok: false; error: string };
 

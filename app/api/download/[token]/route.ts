@@ -28,17 +28,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
   if (!row || row.expires_at < Date.now() || row.download_count >= row.max_downloads) return new Response('Link đã hết hạn hoặc hết lượt tải.', { status: 410 });
   const updated = await db.prepare('UPDATE download_links SET download_count = download_count + 1 WHERE id = ? AND download_count < max_downloads AND expires_at > ?').bind(row.id, Date.now()).run();
   if (!updated.meta.changes) return new Response('Link đã hết lượt tải.', { status: 410 });
-  const object = await getFilesBucket().get(row.r2_key);
-  if (!object) return new Response('File hiện không khả dụng.', { status: 404 });
   const ipHash = await requestFingerprint(request);
   await db.prepare('INSERT INTO download_events (link_id, ip_hash, user_agent, created_at) VALUES (?, ?, ?, ?)').bind(row.id, ipHash, request.headers.get('user-agent') ?? '', Date.now()).run();
   const filename = row.original_filename.replace(/[\r\n"\\/]/g, '_');
-  return new Response(object.body, {
-    headers: {
-      'Content-Type': row.content_type,
-      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
-      'Cache-Control': 'private, no-store',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  });
+  try {
+    return Response.redirect(await getFilesBucket().createSignedUrl(row.r2_key, 60, filename), 302);
+  } catch {
+    return new Response('File hiện không khả dụng.', { status: 404 });
+  }
 }

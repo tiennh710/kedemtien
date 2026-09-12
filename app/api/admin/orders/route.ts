@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   await ensureDatabase();
   const result = await getD1().prepare(`
     SELECT o.id, o.order_code, o.email, o.status, o.amount_total, o.delivery_status, o.delivery_error, o.created_at, o.paid_at,
-      GROUP_CONCAT(oi.title_snapshot, ' • ') AS items
+      STRING_AGG(oi.title_snapshot, ' • ' ORDER BY oi.id) AS items
     FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id
     GROUP BY o.id ORDER BY o.created_at DESC LIMIT 200
   `).all();

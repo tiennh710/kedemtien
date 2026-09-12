@@ -1,9 +1,9 @@
-import { env } from 'cloudflare:workers';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { ensureDatabase, getD1 } from '@/lib/server/database';
 import { sendOtpEmail } from '@/lib/server/email';
+import { env } from '@/lib/server/env';
 import { hmac, normalizeEmail, requestFingerprint } from '@/lib/server/security';
 
 const inputSchema = z.object({ email: z.email().max(254) });
