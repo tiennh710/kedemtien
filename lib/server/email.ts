@@ -2,8 +2,15 @@ import { env } from '@/lib/server/env';
 
 type EmailResult = { ok: true; id?: string } | { ok: false; error: string };
 
-async function sendEmail(input: { to: string; subject: string; html: string; text: string; idempotencyKey: string }): Promise<EmailResult> {
-  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return { ok: false, error: 'Resend chưa được cấu hình.' };
+async function sendEmail(input: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  idempotencyKey: string;
+}): Promise<EmailResult> {
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM)
+    return { ok: false, error: 'Resend chưa được cấu hình.' };
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -11,25 +18,35 @@ async function sendEmail(input: { to: string; subject: string; html: string; tex
       'Content-Type': 'application/json',
       'Idempotency-Key': input.idempotencyKey,
     },
-    body: JSON.stringify({ from: env.EMAIL_FROM, to: [input.to], subject: input.subject, html: input.html, text: input.text }),
+    body: JSON.stringify({
+      from: env.EMAIL_FROM,
+      to: [input.to],
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
+    }),
   });
-  if (!response.ok) return { ok: false, error: `Resend trả về ${response.status}: ${(await response.text()).slice(0, 300)}` };
+  if (!response.ok)
+    return {
+      ok: false,
+      error: `Resend trả về ${response.status}: ${(await response.text()).slice(0, 300)}`,
+    };
   const data = (await response.json()) as { id?: string };
   return { ok: true, id: data.id };
 }
 
-export function sendOtpEmail(email: string, code: string, challengeId: number) {
-  return sendEmail({
-    to: email,
-    subject: `${code} là mã đăng nhập Kẻ Đếm Tiền`,
-    idempotencyKey: `otp-${challengeId}`,
-    text: `Mã đăng nhập của bạn là ${code}. Mã có hiệu lực trong 10 phút.`,
-    html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:32px;color:#17172a"><p style="font-weight:800;color:#4635f3">KẺ ĐẾM TIỀN</p><h1 style="font-size:24px">Mã đăng nhập của bạn</h1><p style="font-size:34px;letter-spacing:8px;font-weight:800">${code}</p><p>Mã có hiệu lực trong 10 phút. Nếu bạn không yêu cầu mã này, hãy bỏ qua email.</p></div>`,
-  });
-}
-
-export function sendDownloadEmail(email: string, orderCode: number, links: Array<{ title: string; url: string }>, attemptKey = 'initial') {
-  const items = links.map((link) => `<li style="margin:12px 0"><a href="${link.url}" style="color:#4635f3;font-weight:700">Tải ${escapeHtml(link.title)}</a></li>`).join('');
+export function sendDownloadEmail(
+  email: string,
+  orderCode: number,
+  links: Array<{ title: string; url: string }>,
+  attemptKey = 'initial',
+) {
+  const items = links
+    .map(
+      (link) =>
+        `<li style="margin:12px 0"><a href="${link.url}" style="color:#4635f3;font-weight:700">Tải ${escapeHtml(link.title)}</a></li>`,
+    )
+    .join('');
   const plain = links.map((link) => `${link.title}: ${link.url}`).join('\n');
   return sendEmail({
     to: email,
@@ -41,5 +58,11 @@ export function sendDownloadEmail(email: string, orderCode: number, links: Array
 }
 
 function escapeHtml(value: string) {
-  return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character);
+  return value.replace(
+    /[&<>'"]/g,
+    (character) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[
+        character
+      ] ?? character,
+  );
 }

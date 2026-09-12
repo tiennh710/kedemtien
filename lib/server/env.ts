@@ -1,18 +1,50 @@
 export const env = {
-  get APP_ORIGIN() { return process.env.APP_ORIGIN; },
-  get ALLOW_INDEXING() { return process.env.ALLOW_INDEXING; },
-  get SESSION_SECRET() { return process.env.SESSION_SECRET; },
-  get OTP_HMAC_SECRET() { return process.env.OTP_HMAC_SECRET; },
-  get ALLOW_DEV_OTP() { return process.env.ALLOW_DEV_OTP; },
-  get PAYOS_CLIENT_ID() { return process.env.PAYOS_CLIENT_ID; },
-  get PAYOS_API_KEY() { return process.env.PAYOS_API_KEY; },
-  get PAYOS_CHECKSUM_KEY() { return process.env.PAYOS_CHECKSUM_KEY; },
-  get RESEND_API_KEY() { return process.env.RESEND_API_KEY; },
-  get EMAIL_FROM() { return process.env.EMAIL_FROM; },
-  get ADMIN_EMAILS() { return process.env.ADMIN_EMAILS; },
-  get POSTGRES_URL() { return process.env.POSTGRES_URL; },
-  get SUPABASE_URL() { return process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL; },
-  get SUPABASE_SECRET_KEY() { return process.env.SUPABASE_SECRET_KEY; },
-  get PRODUCT_FILES_BUCKET() { return process.env.PRODUCT_FILES_BUCKET ?? 'product-files'; },
-  get PRODUCT_IMAGES_BUCKET() { return process.env.PRODUCT_IMAGES_BUCKET ?? 'product-images'; },
+  get APP_ORIGIN() {
+    return process.env.APP_ORIGIN;
+  },
+  get ALLOW_INDEXING() {
+    return process.env.ALLOW_INDEXING;
+  },
+  get SESSION_SECRET() {
+    return process.env.SESSION_SECRET;
+  },
+  get PAYOS_CLIENT_ID() {
+    return process.env.PAYOS_CLIENT_ID;
+  },
+  get PAYOS_API_KEY() {
+    return process.env.PAYOS_API_KEY;
+  },
+  get PAYOS_CHECKSUM_KEY() {
+    return process.env.PAYOS_CHECKSUM_KEY;
+  },
+  get RESEND_API_KEY() {
+    return process.env.RESEND_API_KEY;
+  },
+  get EMAIL_FROM() {
+    return process.env.EMAIL_FROM;
+  },
+  get ADMIN_EMAILS() {
+    return process.env.ADMIN_EMAILS;
+  },
+  get POSTGRES_URL() {
+    return process.env.POSTGRES_URL;
+  },
+  get SUPABASE_URL() {
+    return process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  },
+  get SUPABASE_PUBLISHABLE_KEY() {
+    return (
+      process.env.SUPABASE_PUBLISHABLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    );
+  },
+  get SUPABASE_SECRET_KEY() {
+    return process.env.SUPABASE_SECRET_KEY;
+  },
+  get PRODUCT_FILES_BUCKET() {
+    return process.env.PRODUCT_FILES_BUCKET ?? 'product-files';
+  },
+  get PRODUCT_IMAGES_BUCKET() {
+    return process.env.PRODUCT_IMAGES_BUCKET ?? 'product-images';
+  },
 };

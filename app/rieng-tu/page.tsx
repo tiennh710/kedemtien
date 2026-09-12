@@ -1,3 +1,36 @@
 import { LegalPage } from '@/components/legal-page';
 export const metadata = { title: 'Chính sách riêng tư' };
-export default function Page() { return <LegalPage title="Chính sách riêng tư" updated="08/09/2026"><section><h2>1. Dữ liệu thu thập</h2><p>Website lưu email, lịch sử đơn hàng, phiên đăng nhập và thông tin kỹ thuật cần thiết để bảo vệ link tải.</p></section><section><h2>2. Mục đích sử dụng</h2><p>Dữ liệu được dùng để xác thực tài khoản, xử lý thanh toán, giao file và hỗ trợ khách hàng.</p></section><section><h2>3. Bên xử lý</h2><p>Thông tin cần thiết có thể được gửi tới PayOS để thanh toán và Resend để gửi email giao dịch.</p></section><section><h2>4. Quyền của bạn</h2><p>Bạn có thể yêu cầu tra cứu hoặc xóa dữ liệu không còn cần thiết bằng kênh liên hệ chính thức của cửa hàng.</p></section></LegalPage>; }
+export default function Page() {
+  return (
+    <LegalPage title="Chính sách riêng tư" updated="13/09/2026">
+      <section>
+        <h2>1. Dữ liệu thu thập</h2>
+        <p>
+          Website lưu email, lịch sử đơn hàng, phiên đăng nhập và thông tin kỹ
+          thuật cần thiết để bảo vệ link tải.
+        </p>
+      </section>
+      <section>
+        <h2>2. Mục đích sử dụng</h2>
+        <p>
+          Dữ liệu được dùng để xác thực tài khoản, xử lý thanh toán, giao file
+          và hỗ trợ khách hàng.
+        </p>
+      </section>
+      <section>
+        <h2>3. Bên xử lý</h2>
+        <p>
+          Thông tin cần thiết có thể được gửi tới Google và Supabase để xác
+          thực, PayOS để thanh toán, và Resend để gửi email giao dịch.
+        </p>
+      </section>
+      <section>
+        <h2>4. Quyền của bạn</h2>
+        <p>
+          Bạn có thể yêu cầu tra cứu hoặc xóa dữ liệu không còn cần thiết bằng
+          kênh liên hệ chính thức của cửa hàng.
+        </p>
+      </section>
+    </LegalPage>
+  );
+}

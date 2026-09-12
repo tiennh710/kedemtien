@@ -1,43 +1,88 @@
-'use client';
-
-import { ArrowLeft, KeyRound, Loader2, Mail } from 'lucide-react';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
-import { SubmitEvent, useState } from 'react';
+import { safeReturnTo } from '@/lib/server/security';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { apiError, readJson } from '@/lib/client/api';
+function GoogleLogo() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5">
+      <path
+        fill="#4285F4"
+        d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.92h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.41Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 22c2.7 0 4.97-.9 6.62-2.43l-3.24-2.54c-.9.6-2.05.96-3.38.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.62A10 10 0 0 0 12 22Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M6.39 13.86A6 6 0 0 1 6.08 12c0-.65.11-1.27.31-1.86V7.52H3.04A10 10 0 0 0 2 12c0 1.61.39 3.14 1.04 4.48l3.35-2.62Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 6.01c1.47 0 2.79.51 3.83 1.5l2.87-2.88A9.65 9.65 0 0 0 12 2a10 10 0 0 0-8.96 5.52l3.35 2.62C7.18 7.77 9.39 6.01 12 6.01Z"
+      />
+    </svg>
+  );
+}
 
-export function LoginForm({ returnTo = '/tai-khoan' }: { returnTo?: string }) {
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+export function LoginForm({
+  returnTo = '/tai-khoan',
+  error,
+}: {
+  returnTo?: string;
+  error?: string;
+}) {
+  const destination = safeReturnTo(returnTo);
+  const loginUrl = `/api/auth/google?returnTo=${encodeURIComponent(destination)}`;
+  const message =
+    error === 'oauth_setup'
+      ? 'Google OAuth chưa được cấu hình đầy đủ. Vui lòng liên hệ quản trị viên.'
+      : error
+        ? 'Đăng nhập Google không thành công hoặc đã bị hủy. Vui lòng thử lại.'
+        : '';
 
-  async function requestCode(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault(); setLoading(true); setMessage('');
-    try {
-      const response = await fetch('/api/auth/request-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
-      const data = await readJson<{ debugCode?: string; error?: string }>(response);
-      if (!response.ok) throw new Error(apiError(data, 'Không thể gửi mã.'));
-      setSent(true); if (data.debugCode) { setCode(data.debugCode); setMessage(`Chế độ local: mã ${data.debugCode} đã được điền sẵn.`); } else setMessage('Mã đăng nhập đã được gửi tới email của bạn.');
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Không thể gửi mã.'); }
-    finally { setLoading(false); }
-  }
-
-  async function verify(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault(); setLoading(true); setMessage('');
-    try {
-      const response = await fetch('/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, code, returnTo }) });
-      const data = await readJson<{ returnTo?: string; error?: string }>(response);
-      if (!response.ok || !data.returnTo) throw new Error(apiError(data, 'Không thể đăng nhập.'));
-      window.location.assign(data.returnTo);
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Không thể đăng nhập.'); }
-    finally { setLoading(false); }
-  }
-
-  return <div className="min-h-screen bg-[#f7f8fc] px-4 py-8"><div className="mx-auto max-w-md"><Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-[#6d6e80]"><ArrowLeft className="size-4" />Về thư viện</Link><div className="mt-12 rounded-3xl bg-white p-7 shadow-[0_18px_60px_rgba(38,34,99,.09)] ring-1 ring-[#e0e1ea] sm:p-9"><div className="grid size-12 place-items-center rounded-2xl bg-[#ece9ff] text-[#4635f3]">{sent ? <KeyRound /> : <Mail />}</div><h1 className="mt-5 text-2xl font-extrabold tracking-tight">{sent ? 'Nhập mã đăng nhập' : 'Đăng nhập bằng email'}</h1><p className="mt-2 text-sm leading-6 text-[#6f7082]">{sent ? `Mã gồm 6 chữ số đã được gửi tới ${email}.` : 'Không cần mật khẩu. Chúng tôi sẽ gửi một mã dùng một lần tới email của bạn.'}</p>
-      {!sent ? <form onSubmit={requestCode} className="mt-6"><label htmlFor="login-email" className="text-sm font-semibold">Email</label><Input id="login-email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" required autoComplete="email" className="mt-2 h-11" placeholder="ban@example.com" /><Button disabled={loading} type="submit" className="mt-4 h-11 w-full bg-[#4635f3]">{loading && <Loader2 className="animate-spin" />}Gửi mã đăng nhập</Button></form> : <form onSubmit={verify} className="mt-6"><label htmlFor="login-code" className="text-sm font-semibold">Mã 6 chữ số</label><Input id="login-code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" required pattern="\d{6}" className="mt-2 h-12 text-center text-xl tracking-[.35em]" /><Button disabled={loading || code.length !== 6} type="submit" className="mt-4 h-11 w-full bg-[#4635f3]">{loading && <Loader2 className="animate-spin" />}Xác minh & đăng nhập</Button><button type="button" onClick={() => { setSent(false); setCode(''); setMessage(''); }} className="mt-3 w-full text-sm font-medium text-[#696a7e] hover:text-[#4635f3]">Dùng email khác</button></form>}
-      {message && <p className="mt-4 rounded-xl bg-[#f4f2ff] px-3 py-2 text-sm text-[#5140c4]">{message}</p>}<p className="mt-6 text-xs leading-5 text-[#8a8b9c]">Khi tiếp tục, bạn đồng ý với Điều khoản sử dụng và Chính sách riêng tư.</p></div></div></div>;
+  return (
+    <div className="min-h-screen bg-[#f7f8fc] px-4 py-8">
+      <div className="mx-auto max-w-md">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-medium text-[#6d6e80]"
+        >
+          <ArrowLeft className="size-4" />
+          Về thư viện
+        </Link>
+        <div className="mt-12 rounded-3xl bg-white p-7 shadow-[0_18px_60px_rgba(38,34,99,.09)] ring-1 ring-[#e0e1ea] sm:p-9">
+          <div className="grid size-12 place-items-center rounded-2xl bg-[#ece9ff] text-[#4635f3]">
+            <ShieldCheck />
+          </div>
+          <h1 className="mt-5 text-2xl font-extrabold tracking-tight">
+            Đăng nhập bằng Google
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-[#6f7082]">
+            Dùng tài khoản Google để truy cập thư viện file và quản lý các sản
+            phẩm bạn đã mua.
+          </p>
+          <a
+            href={loginUrl}
+            className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#d8d9e3] bg-white px-4 text-sm font-semibold text-[#252538] shadow-sm transition hover:border-[#b9b5f6] hover:bg-[#faf9ff] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#cbc7ff]"
+          >
+            <GoogleLogo />
+            Tiếp tục với Google
+          </a>
+          {message && (
+            <p
+              role="alert"
+              className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700"
+            >
+              {message}
+            </p>
+          )}
+          <p className="mt-6 text-xs leading-5 text-[#8a8b9c]">
+            Khi tiếp tục, bạn đồng ý với Điều khoản sử dụng và Chính sách riêng
+            tư.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
