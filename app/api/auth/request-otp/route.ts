@@ -9,14 +9,11 @@ import { hmac, normalizeEmail, requestFingerprint } from '@/lib/server/security'
 const inputSchema = z.object({ email: z.email().max(254) });
 
 export async function POST(request: Request) {
-  let stage = 'parse-request';
   try {
     const parsed = inputSchema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: 'Email không hợp lệ.' }, { status: 400 });
     const email = normalizeEmail(parsed.data.email);
-    stage = 'fingerprint';
     const ipHash = await requestFingerprint(request);
-    stage = 'database';
     await ensureDatabase();
     const db = getD1();
     const now = Date.now();
@@ -27,17 +24,13 @@ export async function POST(request: Request) {
 
     const random = crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000;
     const code = random.toString().padStart(6, '0');
-    stage = 'hmac';
     const codeHash = await hmac(`${email}:${code}`, 'otp');
-    stage = 'save-challenge';
     const result = await db.prepare('INSERT INTO otp_challenges (email, code_hash, ip_hash, expires_at, attempts, created_at) VALUES (?, ?, ?, ?, 0, ?)').bind(email, codeHash, ipHash, now + 10 * 60 * 1000, now).run();
     const challengeId = Number(result.meta.last_row_id);
-    stage = 'send-email';
     const delivery = await sendOtpEmail(email, code, challengeId);
     if (!delivery.ok && env.ALLOW_DEV_OTP !== '1') return NextResponse.json({ error: delivery.error }, { status: 503 });
     return NextResponse.json({ ok: true, ...(env.ALLOW_DEV_OTP === '1' ? { debugCode: code } : {}) });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Không thể gửi mã đăng nhập.';
-    return NextResponse.json({ error: `[${stage}] ${message}` }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Không thể gửi mã đăng nhập.' }, { status: 500 });
   }
 }
