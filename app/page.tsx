@@ -1,8 +1,12 @@
 import { Marketplace } from '@/components/marketplace';
+import { demoProducts } from '@/lib/catalog';
 import { listProducts } from '@/lib/server/database';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  return <Marketplace products={await listProducts()} />;
+  const products = process.env.POSTGRES_URL
+    ? await listProducts()
+    : demoProducts;
+  return <Marketplace products={products} />;
 }
