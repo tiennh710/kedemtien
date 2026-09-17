@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {
   FileSpreadsheet,
   Coins,
+  CircleDollarSign,
   Menu,
   Search,
   ShoppingBag,
@@ -60,15 +61,22 @@ export function SiteHeader({ compact = false }: { compact?: boolean }) {
           aria-label="Tài khoản và giỏ hàng"
         >
           <Link
+            href="/ty-gia"
+            className="hidden items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-semibold text-[#4e4f62] hover:bg-[#f5f5fa] hover:text-[#12688c] lg:flex"
+          >
+            <CircleDollarSign className="size-4" />
+            Tỷ giá
+          </Link>
+          <Link
             href="/gia-vang"
-            className="hidden items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-semibold text-[#4e4f62] hover:bg-[#f5f5fa] hover:text-[#a36e00] md:flex"
+            className="hidden items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-semibold text-[#4e4f62] hover:bg-[#f5f5fa] hover:text-[#a36e00] md:flex"
           >
             <Coins className="size-4" />
             Giá vàng
           </Link>
           <Link
             href="/lai-suat"
-            className="hidden items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-semibold text-[#4e4f62] hover:bg-[#f5f5fa] hover:text-[#4635f3] md:flex"
+            className="hidden items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-semibold text-[#4e4f62] hover:bg-[#f5f5fa] hover:text-[#4635f3] md:flex"
           >
             <TrendingUp className="size-4" />
             Lãi suất
@@ -83,14 +91,14 @@ export function SiteHeader({ compact = false }: { compact?: boolean }) {
           )}
           <Link
             href={user ? '/tai-khoan' : '/dang-nhap'}
-            className="hidden items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-[#f5f5fa] sm:flex"
+            className="hidden items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-[#f5f5fa] sm:flex"
           >
             <UserRound className="size-4" />
             {user ? 'Tài khoản' : 'Đăng nhập'}
           </Link>
           <Link
             href="/gio-hang"
-            className="relative flex h-10 items-center gap-2 rounded-xl border border-[#e3e4ed] px-3 text-sm font-medium hover:bg-[#f7f8fc]"
+            className="relative flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-[#e3e4ed] px-3 text-sm font-medium hover:bg-[#f7f8fc]"
           >
             <ShoppingBag className="size-4" />
             <span className="hidden sm:inline">Giỏ hàng</span>
