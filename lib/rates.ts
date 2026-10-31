@@ -81,44 +81,56 @@ function channelLabel(channel?: string | null) {
 }
 
 export async function getRates(): Promise<RatesData> {
-  const response = await fetch('https://taichinh.com/api/v1/rates', {
-    next: { revalidate: 1800 },
-    headers: { Accept: 'application/json' },
-  });
+  try {
+    const response = await fetch('https://taichinh.com/api/v1/rates', {
+      next: { revalidate: 1800 },
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(8_000),
+    });
 
-  if (!response.ok)
-    throw new Error(`Không thể tải dữ liệu lãi suất (${response.status})`);
-  const data = (await response.json()) as RatesApiResponse;
+    if (!response.ok)
+      throw new Error(`Không thể tải dữ liệu lãi suất (${response.status})`);
+    const data = (await response.json()) as RatesApiResponse;
 
-  const banks = Object.entries(data.banks ?? {}).map(([id, bank]) => {
-    const rates: BankRate['rates'] = {};
-    for (const term of RATE_TERMS) {
-      const offer = bank.eligible_by_month?.[String(term)];
-      if (typeof offer?.rate !== 'number') continue;
-      rates[term] = {
-        rate: offer.rate,
-        channel: channelLabel(offer.qualifiers?.channel),
-        product: offer.qualifiers?.product ?? null,
-        conditions: offer.conditions ?? [],
+    const banks = Object.entries(data.banks ?? {}).map(([id, bank]) => {
+      const rates: BankRate['rates'] = {};
+      for (const term of RATE_TERMS) {
+        const offer = bank.eligible_by_month?.[String(term)];
+        if (typeof offer?.rate !== 'number') continue;
+        rates[term] = {
+          rate: offer.rate,
+          channel: channelLabel(offer.qualifiers?.channel),
+          product: offer.qualifiers?.product ?? null,
+          conditions: offer.conditions ?? [],
+        };
+      }
+      const publisher =
+        bank.source?.publisher ??
+        Object.values(bank.eligible_by_month ?? {})[0]?.source?.publisher;
+      return {
+        id,
+        name: displayName(id, publisher),
+        effectiveDate: bank.effective_date ?? null,
+        rates,
       };
-    }
-    const publisher =
-      bank.source?.publisher ??
-      Object.values(bank.eligible_by_month ?? {})[0]?.source?.publisher;
-    return {
-      id,
-      name: displayName(id, publisher),
-      effectiveDate: bank.effective_date ?? null,
-      rates,
-    };
-  });
+    });
 
-  banks.sort((a, b) => (b.rates[12]?.rate ?? -1) - (a.rates[12]?.rate ?? -1));
-  return {
-    principalVnd: data.eligibility?.principal_vnd ?? 100_000_000,
-    eligibleBanks: data.coverage?.eligible_banks ?? banks.length,
-    eligibleOffers: data.coverage?.eligible_offers ?? 0,
-    fetchedAt: new Date().toISOString(),
-    banks,
-  };
+    banks.sort((a, b) => (b.rates[12]?.rate ?? -1) - (a.rates[12]?.rate ?? -1));
+    return {
+      principalVnd: data.eligibility?.principal_vnd ?? 100_000_000,
+      eligibleBanks: data.coverage?.eligible_banks ?? banks.length,
+      eligibleOffers: data.coverage?.eligible_offers ?? 0,
+      fetchedAt: new Date().toISOString(),
+      banks,
+    };
+  } catch (error) {
+    console.error('[market-data:rates] Không thể tải dữ liệu', error);
+    return {
+      principalVnd: 100_000_000,
+      eligibleBanks: 0,
+      eligibleOffers: 0,
+      fetchedAt: new Date().toISOString(),
+      banks: [],
+    };
+  }
 }

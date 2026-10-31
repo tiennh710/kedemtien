@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   TrendingUp,
   UserRound,
+  X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -19,9 +20,14 @@ import { readJson } from '@/lib/client/api';
 
 type User = { email: string; isAdmin: boolean } | null;
 
-export function SiteHeader({ compact = false }: { compact?: boolean }) {
+export function SiteHeader({
+  compact: _compact = false,
+}: {
+  compact?: boolean;
+}) {
   const { items } = useCart();
   const [user, setUser] = useState<User>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     fetch('/api/auth/session')
       .then((response) => readJson<{ user?: User }>(response))
@@ -31,17 +37,22 @@ export function SiteHeader({ compact = false }: { compact?: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-[#e7e8f1] bg-white/92 backdrop-blur-xl">
       <div className="mx-auto flex h-17 max-w-[1560px] items-center gap-4 px-4 sm:px-6 lg:px-8">
-        {!compact && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            aria-label="Mở danh mục"
-          >
-            <Menu />
-          </Button>
-        )}
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden"
+          aria-label={menuOpen ? 'Đóng danh mục' : 'Mở danh mục'}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-navigation"
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <X /> : <Menu />}
+        </Button>
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2.5"
+          onClick={() => setMenuOpen(false)}
+        >
           <span className="grid size-9 place-items-center rounded-xl bg-[#4635f3] text-white shadow-[0_8px_22px_rgba(70,53,243,.25)]">
             <FileSpreadsheet className="size-5" strokeWidth={2.2} />
           </span>
@@ -108,6 +119,49 @@ export function SiteHeader({ compact = false }: { compact?: boolean }) {
           </Link>
         </nav>
       </div>
+      {menuOpen && (
+        <nav
+          id="mobile-navigation"
+          className="border-t border-[#ececf3] bg-white px-4 py-3 shadow-lg lg:hidden"
+          aria-label="Danh mục chính"
+        >
+          <div className="mx-auto grid max-w-[1560px] gap-1">
+            {[
+              { href: '/#san-pham', label: 'Mẫu Excel', icon: Search },
+              { href: '/ty-gia', label: 'Tỷ giá', icon: CircleDollarSign },
+              { href: '/gia-vang', label: 'Giá vàng', icon: Coins },
+              { href: '/lai-suat', label: 'Lãi suất', icon: TrendingUp },
+            ].map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-[#363747] hover:bg-[#f5f5fa] hover:text-[#4635f3]"
+              >
+                <Icon className="size-4" />
+                {label}
+              </Link>
+            ))}
+            <Link
+              href={user ? '/tai-khoan' : '/dang-nhap'}
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-[#363747] hover:bg-[#f5f5fa] hover:text-[#4635f3]"
+            >
+              <UserRound className="size-4" />
+              {user ? 'Tài khoản' : 'Đăng nhập'}
+            </Link>
+            {user?.isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMenuOpen(false)}
+                className="rounded-xl px-3 py-3 text-sm font-semibold text-[#4635f3] hover:bg-[#efedff]"
+              >
+                Quản trị
+              </Link>
+            )}
+          </div>
+        </nav>
+      )}
     </header>
   );
 }

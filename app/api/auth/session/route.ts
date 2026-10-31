@@ -4,5 +4,8 @@ import { getSessionUser } from '@/lib/server/security';
 
 export async function GET(request: Request) {
   const user = await getSessionUser(request);
-  return NextResponse.json({ user });
+  return NextResponse.json(
+    { user },
+    { headers: { 'Cache-Control': 'private, no-store' } },
+  );
 }

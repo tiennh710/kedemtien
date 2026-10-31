@@ -64,46 +64,59 @@ const currencyNames: Record<string, string> = {
 const featuredOrder = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'SGD', 'CNY', 'KRW'];
 
 export async function getFxRates(): Promise<FxData> {
-  const response = await fetch('https://taichinh.com/api/v1/fx', {
-    next: { revalidate: 900 },
-    headers: { Accept: 'application/json' },
-  });
-  if (!response.ok)
-    throw new Error(`Không thể tải dữ liệu tỷ giá (${response.status})`);
-  const data = (await response.json()) as FxApiResponse;
+  try {
+    const response = await fetch('https://taichinh.com/api/v1/fx', {
+      next: { revalidate: 900 },
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok)
+      throw new Error(`Không thể tải dữ liệu tỷ giá (${response.status})`);
+    const data = (await response.json()) as FxApiResponse;
 
-  const rates = Object.entries(data.rates ?? {}).flatMap(([key, item]) => {
-    const sell = item.metrics?.sell?.value ?? item.sell;
-    if (typeof sell !== 'number') return [];
-    const code = key.toUpperCase();
-    return [
-      {
-        code,
-        name: currencyNames[code] ?? code,
-        cashBuy: item.metrics?.cash_buy?.value ?? item.cash_buy ?? null,
-        transferBuy:
-          item.metrics?.transfer_buy?.value ?? item.transfer_buy ?? null,
-        sell,
-        observedAt:
-          item.metrics?.sell?.observed_at ??
-          item.observed_at ??
-          new Date().toISOString(),
-      },
-    ];
-  });
-  rates.sort((a, b) => {
-    const ai = featuredOrder.indexOf(a.code);
-    const bi = featuredOrder.indexOf(b.code);
-    return (
-      (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || a.code.localeCompare(b.code)
-    );
-  });
+    const rates = Object.entries(data.rates ?? {}).flatMap(([key, item]) => {
+      const sell = item.metrics?.sell?.value ?? item.sell;
+      if (typeof sell !== 'number') return [];
+      const code = key.toUpperCase();
+      return [
+        {
+          code,
+          name: currencyNames[code] ?? code,
+          cashBuy: item.metrics?.cash_buy?.value ?? item.cash_buy ?? null,
+          transferBuy:
+            item.metrics?.transfer_buy?.value ?? item.transfer_buy ?? null,
+          sell,
+          observedAt:
+            item.metrics?.sell?.observed_at ??
+            item.observed_at ??
+            new Date().toISOString(),
+        },
+      ];
+    });
+    rates.sort((a, b) => {
+      const ai = featuredOrder.indexOf(a.code);
+      const bi = featuredOrder.indexOf(b.code);
+      return (
+        (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || a.code.localeCompare(b.code)
+      );
+    });
 
-  return {
-    bank:
-      data.bank === 'vietcombank' ? 'Vietcombank' : (data.bank ?? 'Ngân hàng'),
-    centralUsd: data.sbv_central_usd?.value ?? null,
-    centralObservedAt: data.sbv_central_usd?.observed_at ?? null,
-    rates,
-  };
+    return {
+      bank:
+        data.bank === 'vietcombank'
+          ? 'Vietcombank'
+          : (data.bank ?? 'Ngân hàng'),
+      centralUsd: data.sbv_central_usd?.value ?? null,
+      centralObservedAt: data.sbv_central_usd?.observed_at ?? null,
+      rates,
+    };
+  } catch (error) {
+    console.error('[market-data:fx] Không thể tải dữ liệu', error);
+    return {
+      bank: 'Vietcombank',
+      centralUsd: null,
+      centralObservedAt: null,
+      rates: [],
+    };
+  }
 }
